@@ -1,15 +1,15 @@
 import numpy as np
 import pandas as pd
 
-red = pd.read_csv("winequality-red.csv")
-white = pd.read_csv("winequality-white.csv", sep =';')
+red = pd.read_csv("winequality/winequality-red.csv")
+white = pd.read_csv("winequality/winequality-white.csv", sep =';')
 red['type'] = 1
 white['type'] = 0
-wines=red.append(white,ignore_index=True)
+wines=red.append(white,ignore_index=True) #one below the other
 
 from sklearn.model_selection import train_test_split
 
-#______________________________________________________Prediting Type_____________________________________
+#______________________________________________________Predicting Type_____________________________________
 X=wines.ix[:,:11] #selecting every col except quality and type
 y=np.ravel(wines.type) #flattening type col into ndarray
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
@@ -28,20 +28,32 @@ model.add(Dense(12,activation='relu',input_shape=(11,)))
 model.add(Dense(8,activation='relu'))
 model.add(Dense(1,activation='sigmoid'))
 
+model2 = Sequential() #better overall scores, possibly more overfitting
+model2.add(Dense(8,activation='relu',input_shape=(11,)))
+model2.add(Dense(6,activation='relu'))
+model2.add(Dense(6,activation='relu'))
+model2.add(Dense(1,activation='sigmoid')) #has to be sigmoid in this case
+
 #model.output_shape
 #model.summary()
 #model.get_config()
 #model.get_weights()
 
+#Like the logistic sigmoid, the tanh function is also sigmoidal (“s”-shaped), but instead outputs values that range (-1, 1). 
+#Thus strongly negative inputs to the tanh will map to negative outputs. 
+#Additionally, only zero-valued inputs are mapped to near-zero outputs.
+#These properties make the network less likely to get “stuck” during training
+
 #1 epoch = 1: pass over the entire dataset once 
 # for every batch processed the model's parameters get recalculated (in this case every instance of the training set)
 # verbose: logging; 1 = progress bar, 2 = one line per epoch
 # monitoring the accuracy during the training was made possible by passing ['accuracy'] to the metrics argument.
+#cross entropy is commonly used in binary classification. For Multi class, multi class cross entropy
 model.compile(loss='binary_crossentropy',
               optimizer = 'adam',
               metrics=['accuracy'])
 
-model.fit(X_train, y_train, epochs=19, batch_size= 1, verbose = 1) 
+model.fit(X_train, y_train, epochs=10, batch_size= 1, verbose = 1) 
 '''
 Some of the most popular optimization algorithms used are the Stochastic Gradient Descent (SGD), ADAM and RMSprop. 
 Depending on whichever algorithm you choose, you’ll need to tune certain parameters, such as learning rate or momentum. 
@@ -51,6 +63,7 @@ As you see in this example, you used binary_crossentropy for the binary classifi
 whether a wine is red or white. 
 Lastly, with multi-class classification, you’ll make use of categorical_crossentropy.
 '''
+
 y_pred = model.predict(X_test)
 class_result=y_pred.round()
 score = model.evaluate(X_test, y_test, verbose=1)
@@ -66,6 +79,14 @@ recall_score(y_test,class_result)
 f1_score(y_test,class_result)
 cohen_kappa_score(y_test,class_result)
 
+#__________________________________Predicting Quality______________________________________________________________
+
+y= wines.quality
+X= wines.drop('quality',axis=1)
+#-------------- Scaling----------------------------------------------------------------
+from sklearn.preprocessing import StandardScaler
+X = StandardScaler().fit_transform(X)
+#-----------------------K-fold validation----------------------------------------------------------------------------=
 
 
 
