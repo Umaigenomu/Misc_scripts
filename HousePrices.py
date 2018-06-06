@@ -182,6 +182,8 @@ https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-
 http://scikit-learn.org/stable/auto_examples/preprocessing/plot_scaling_importance.html#sphx-glr-auto-examples-preprocessing-plot-scaling-importance-py
 PCA-/
 http://blog.kaggle.com/2016/12/27/a-kagglers-guide-to-model-stacking-in-practice/
+https://github.com/fmfn/BayesianOptimization 
+https://jmhessel.github.io/Bayesian-Optimization/
 '''
 from sklearn.linear_model import Lasso, ElasticNet, BayesianRidge, LassoLarsIC
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
