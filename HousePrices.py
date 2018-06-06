@@ -50,7 +50,10 @@ def plot_dist_target():
     plt.savefig("Dist. and Prob. Plots of Sale Price.png", dpi=160)
 def boxcox_transf_target():
     train.SalePrice = stats.boxcox(train.SalePrice)[0]
-boxcox_transf_target()
+# boxcox_transf_target()
+def log_trans_target():
+    train.SalePrice = np.log1p(train.SalePrice)
+log_trans_target()
 y_train = train.SalePrice.values
 # plot_dist_target()
 
@@ -116,7 +119,9 @@ def fill_na_all():
     all.SaleType.fillna(all.SaleType.mode()[0], inplace=True)
     all.MSSubClass.fillna("None", inplace=True)
 
-
+    # Transform passes each column for each group as a Series to the funcion. Function must return
+    # a a sequence the same length as the group.
+    # Apply passes all the columns as a DataFrame
     # fill in missing values by the median LotFrontage of the neighborhood. Transforms a pd.Series.
     all.LotFrontage = all.groupby("Neighborhood").LotFrontage.transform(lambda x: x.fillna(x.median()))
 # label encoding for ordinality
@@ -156,7 +161,7 @@ def plot_skewness(x):
 # plot_skewness(-15)
 def box_skew_cox():
     skewn = skewness()
-    to_be_fixed = skewn[np.abs(skewn) > 0.75].index
+    to_be_fixed = skewn[np.abs(skewn.Skew) > 0.75].index
     for ind in to_be_fixed:
         all[ind] = boxcox1p(all[ind], 0.15)
 box_skew_cox()
@@ -169,9 +174,14 @@ test = all[ntrain:]
 #  -------------------------------------------------------MODELLING-----------------------------------------------------
 '''
 https://stats.stackexchange.com/questions/92672/difference-between-primal-dual-and-kernel-ridge-regression
-https://medium.com/data-design/how-to-not-be-dumb-at-applying-principal-component-analysis-pca-6c14de5b3c9d
 https://nycdatascience.com/blog/student-works/house-price-prediction-with-creative-feature-engineering-and-advanced-regression-techniques/
 https://www.kaggle.com/solegalli/feature-engineering-for-house-price-modelling
+PCA
+https://medium.com/data-design/how-to-not-be-dumb-at-applying-principal-component-analysis-pca-6c14de5b3c9d
+https://towardsdatascience.com/a-one-stop-shop-for-principal-component-analysis-5582fb7e0a9c
+http://scikit-learn.org/stable/auto_examples/preprocessing/plot_scaling_importance.html#sphx-glr-auto-examples-preprocessing-plot-scaling-importance-py
+PCA-/
+http://blog.kaggle.com/2016/12/27/a-kagglers-guide-to-model-stacking-in-practice/
 '''
 from sklearn.linear_model import Lasso, ElasticNet, BayesianRidge, LassoLarsIC
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -185,11 +195,36 @@ import xgboost as xgb
 import lightgbm as lgb
 
 n_folds = 5
-
 def rmsleCV(model):
     kf = ShuffleSplit(n_folds, test_size=(1/n_folds), random_state=42)
     rmse = np.sqrt(-cross_val_score(model, train.values, y_train, scoring="neg_mean_squared_error", cv=kf))
     return rmse
 
+# making these robust to outliers
+lasso = make_pipeline(RobustScaler(), Lasso(alpha=0.0005, random_state=1))
+enet = make_pipeline(RobustScaler(), ElasticNet(alpha=0.0005, l1_ratio=.9, random_state=3))
 
+krr = KernelRidge(alpha=0.6, kernel='polynomial', degree=2, coef0=2.5)
+
+gboost = GradientBoostingRegressor(n_estimators=3000, learning_rate=0.05,
+                                   max_depth=4, max_features='sqrt',
+                                   min_samples_leaf=15, min_samples_split=10,
+                                   loss='huber', random_state=5)  # huber is robust to outliers
+
+xgboost = xgb.XGBRegressor(colsample_bytree=0.4603, gamma=0.0468,
+                           learning_rate=0.05, max_depth=3,
+                           min_child_weight=1.7817, n_estimators=2200,
+                           reg_alpha=0.4640, reg_lambda=0.8571,
+                           subsample=0.5213, silent=1,
+                           random_state=7, nthread=-1)
+
+lgboost = lgb.LGBMRegressor(objective='regression', num_leaves=5,
+                            learning_rate=0.05, n_estimators=720,
+                            max_bin=55, bagging_fraction=0.8,
+                            bagging_freq=5, feature_fraction=0.2319,
+                            feature_fraction_seed=9, bagging_seed=9,
+                            min_data_in_leaf=6, min_sum_hessian_in_leaf=11)
+
+score = rmsleCV(lgboost)
+print("Mean: {:.6f}, Std: {:.4f}".format(score.mean(), score.std()))
 
